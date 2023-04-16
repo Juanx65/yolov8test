@@ -69,3 +69,34 @@ Creamos un nuevo proyecto, donde debemos indicar:
 </div>
 
 finalmente corremos el system trace con lo que desamos ver (recuerde marcar la GPU).
+
+# probar tensorRT version:
+
+para esto es necesario tener instalado CUDA y CUDNN en el sistema, ademas de tensorRT, almenos en el env (usando pip)
+
+revisar este repo: 
+
+```
+https://github.com/triple-Mu/YOLOv8-TensorRT
+```
+
+Es necesario indicar la libreria de cuddn para poder hacer el profile de la red usando tensorrt: 
+
+``` 
+LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/targets/x86_64-linux/lib/
+```
+
+<div align="center">
+      <a href="">
+     <img
+      src="readme-img/profile-RT.png"
+      alt="flujo de diseño Synopsys"
+      style="width:70%;">
+      </a>
+</div>
+
+
+# REF
+
+* YOLOv8 `https://github.com/ultralytics/ultralytics`
+* TensorRT-YOLOv8 `https://github.com/triple-Mu/YOLOv8-TensorRT`

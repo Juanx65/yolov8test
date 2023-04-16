@@ -9,10 +9,16 @@ from config import CLASSES, COLORS
 from models.torch_utils import det_postprocess
 from models.utils import blob, letterbox, path_to_list
 
+import os
+
+current_directory = os.path.dirname(os.path.abspath(__file__))
+
 
 def main(args: argparse.Namespace) -> None:
     device = torch.device(args.device)
-    Engine = TRTModule(args.engine, device)
+
+    engine_path = os.path.join(current_directory,args.engine)
+    Engine = TRTModule(engine_path, device)
     H, W = Engine.inp_info[0].shape[-2:]
 
     # set desired output names order
@@ -70,8 +76,14 @@ def main(args: argparse.Namespace) -> None:
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--engine', type=str, help='Engine file')
-    parser.add_argument('--imgs', type=str, help='Images file')
+    parser.add_argument('--engine', 
+                        type=str,
+                        default='weights/best.engine',
+                        help='Engine file')
+    parser.add_argument('--imgs', 
+                        type=str, 
+                        default='Data1.mp4',
+                        help='Images file')
     parser.add_argument('--show',
                         action='store_true',
                         help='Show the detection results')
