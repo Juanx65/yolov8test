@@ -5,7 +5,7 @@ import numpy as np
 random.seed(0)
 
 # detection model classes
-CLASSES = ('pellet')
+CLASSES = ('head','helmet','person')
 
 # colors for per classes
 COLORS = {
