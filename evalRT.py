@@ -5,6 +5,7 @@ from pathlib import Path
 import cv2
 import torch
 import os
+import math
 
 import yaml
 from sklearn.metrics import average_precision_score
@@ -65,27 +66,35 @@ def main(args: argparse.Namespace) -> None:
         bboxes -= dwdh
         bboxes /= ratio
 
+        ##############
+        gt_labels, gt_boxs = get_ground_truth_label_and_box(image, ground_truth)  # Implementar esta función para obtener la etiqueta y caja de verdad de tierra
+        #print("gt_boxes para primera imagen: ", gt_boxs)
+        ########
 
-        for (bbox, score, label) in zip(bboxes, scores, labels):
+        for j, (bbox, score, label) in enumerate( zip(bboxes, scores, labels)):
             bbox = bbox.round().int().tolist()
             cls_id = int(label)
             cls = CLASSES[cls_id]
             color = COLORS[cls]
-            #print( bbox[2:])
+            #print("box predict: ", bbox)
             cv2.rectangle(draw, bbox[:2], bbox[2:], color, 2)
             cv2.putText(draw,
                         f'{cls}:{score:.3f}', (bbox[0], bbox[1] - 2),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         0.75, [225, 255, 255],
                         thickness=2)
-            gt_label, gt_box = get_ground_truth_label_and_box(image, ground_truth)  # Implementar esta función para obtener la etiqueta y caja de verdad de tierra
+            
+            gt_label_indice, gt_box = bbox_mas_cercana(gt_boxs,bbox)
+           #print(gt_label_indice, gt_labels)
+            gt_label = gt_labels[gt_label_indice]
+            
             all_preds.append((gt_label, gt_box, label, bbox, score))
 
             # Dibuja la caja del ground truth
             if gt_box is not None:
                 gt_color = (0,0,255) 
-                x1, y1, x2, y2 = [int(coord*640) for coord in gt_box]
-                print(x1, y1, x2, y2)
+                x1, y1, x2, y2 = [int(coord) for coord in gt_box]
+                #print("box gt: ", x1, y1, x2, y2)
                 cv2.rectangle(draw, (x1, y1), (x2, y2), gt_color, 2)
         if args.show:
             cv2.imshow('result', draw)
@@ -93,8 +102,8 @@ def main(args: argparse.Namespace) -> None:
         else:
             cv2.imwrite(str(save_image), draw)
 
-    precisions50, recalls50 = calculate_precision_recall(ground_truth, all_preds, len(CLASSES), H, W, iou_threshold=0.5)
-    precisions95, recalls95 = calculate_precision_recall(ground_truth, all_preds, len(CLASSES), H, W,  iou_threshold=0.95)
+    precisions50, recalls50 = calculate_precision_recall(ground_truth, all_preds, len(CLASSES), iou_threshold=0.5)
+    precisions95, recalls95 = calculate_precision_recall(ground_truth, all_preds, len(CLASSES), iou_threshold=0.95)
 
     print("Precisiones (IoU=0.5):", precisions50)
     print("Recuperaciones (IoU=0.5):", recalls50)
@@ -120,7 +129,7 @@ def load_ground_truth_labels(labels_path):
     #print(ground_truth)
     return ground_truth
 
-def calculate_precision_recall(gt, preds, n_classes, H, W, iou_threshold=0.5):
+def calculate_precision_recall(gt, preds, n_classes, iou_threshold=0.5):
     #print('preds: ', preds)
     gt_labels = []
     gt_boxes = []
@@ -139,7 +148,7 @@ def calculate_precision_recall(gt, preds, n_classes, H, W, iou_threshold=0.5):
 
         for gt_label, gt_box, pred_label, pred_box, pred_score in preds:
             if gt_label == cls and pred_label == cls:
-                iou = calculate_iou( gt_box, pred_box, H, W)
+                iou = calculate_iou( gt_box, pred_box)
                 #print('iou, gt, pred: ', iou,', ', gt_box, ', ', pred_box)
                 if iou >= iou_threshold:
                     tp += 1
@@ -167,15 +176,12 @@ def calculate_precision_recall(gt, preds, n_classes, H, W, iou_threshold=0.5):
 
     return precisions, recalls
 
-def calculate_iou(box1, box2, H,W):
-    x1, y1, w1, h1 = box1
-    X1, Y1, W1, H1 = box2
+def calculate_iou(box1, box2):
+    x1, y1, x2, y2 = box1
+    X1, Y1, X2, Y2 = box2
 
-    x1, y1, w1, h1 = x1*W, y1*H, w1*W, h1*H
-
-    # Convertir el formato (x, y, w, h) a (x1, y1, x2, y2)
-    x1, y1, x2, y2 = x1 - w1 / 2, y1 - h1 / 2, x1 + w1 / 2, y1 + h1 / 2
-    X1, Y1, X2, Y2 = X1 - W1 / 2, Y1 - H1 / 2, X1 + W1 / 2, Y1 + H1 / 2
+    print("box gt: ", x1, y1, x2, y2)
+    print("box pr: ", X1, Y1, X2, Y2)
 
     xi1 = max(x1, X1)
     yi1 = max(y1, Y1)
@@ -184,7 +190,7 @@ def calculate_iou(box1, box2, H,W):
 
     inter_area = max(0, xi2 - xi1) * max(0, yi2 - yi1)
     box1_area = (x2 - x1) * (y2 - y1)
-    box2_area = ((X2 - X1) * (Y2 - Y1))
+    box2_area = (X2 - X1) * (Y2 - Y1)
     #print('box areas: ', box1_area, ' , ', box2_area)
     union_area = box1_area + box2_area - inter_area
 
@@ -200,14 +206,29 @@ def get_ground_truth_label_and_box(image, ground_truth):
     gt_labels_boxes = ground_truth[filename]
     if not gt_labels_boxes:
         return None, None
+    
+    bboxs = []
+    labels = []
+    for cls, x, y, w, h in gt_labels_boxes:
+        bboxs.append([ int((x - w / 2)*640), int((y - h / 2)*640), int((x + w / 2)*640), int((y + h / 2)*640)])
+        labels.append(int(cls))
+        #print('cls, bbox: ', cls,bbox)
+    return labels, bboxs
 
-    # Aquí asumimos que solo hay un objeto por imagen. Si hay múltiples objetos,
-    # deberás adaptar esta función para devolver todos los objetos y ajustar
-    # el código en consecuencia.
-    cls, x, y, w, h = gt_labels_boxes[0]
-    bbox = [x - w / 2, y - h / 2, x + w / 2, y + h / 2]
-    #print('cls, bbox: ', cls,bbox)
-    return cls, bbox
+def bbox_mas_cercana(ground_truth, prediccion):
+    distancia_minima = math.inf
+    bbox_mas_cercana = None
+    indice_label = 0
+    for i, bbox in enumerate(ground_truth):
+        # Calcular la distancia euclidiana entre la predicción y cada bbox de ground truth
+        distancia = math.sqrt((bbox[0] - prediccion[0])**2 + (bbox[1] - prediccion[1])**2 + 
+                              (bbox[2] - prediccion[2])**2 + (bbox[3] - prediccion[3])**2)
+        # Actualizar la bbox más cercana si la distancia actual es menor que la distancia mínima anterior
+        if distancia < distancia_minima:
+            distancia_minima = distancia
+            bbox_mas_cercana = bbox
+            indice_label = i
+    return indice_label, bbox_mas_cercana
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
