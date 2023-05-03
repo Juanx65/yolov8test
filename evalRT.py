@@ -12,6 +12,8 @@ import glob
 from config import CLASSES, COLORS
 from models.torch_utils import det_postprocess
 from models.utils import blob, letterbox
+import time
+
 
 
 def main(args: argparse.Namespace) -> None:
@@ -47,6 +49,8 @@ def main(args: argparse.Namespace) -> None:
         print('error al ingresar el dataset de validacion')
         return
     all_preds = []
+    infer_time = []  # Agrega una lista para almacenar los tiempos de inferencia
+
     for i, image in enumerate(images):
         save_image = save_path / image.split('/valid/images/')[1]
         #print(save_image)
@@ -58,7 +62,12 @@ def main(args: argparse.Namespace) -> None:
         dwdh = torch.asarray(dwdh * 2, dtype=torch.float32, device=device)
         tensor = torch.asarray(tensor, device=device)
         # inference
+        # Inicia el tiempo de inferencia
+        start_time = time.time()
         data = Engine(tensor)
+        # Calcula el tiempo de inferencia
+        elapsed_time = (time.time() - start_time) * 1000 # para ms es el *1000
+        infer_time.append(elapsed_time)
 
         bboxes, scores, labels = det_postprocess(data)
         bboxes -= dwdh
@@ -129,8 +138,8 @@ def main(args: argparse.Namespace) -> None:
     precisions90, recalls90 = calculate_precision_recall(ground_truth, all_preds, len(CLASSES), iou_threshold=0.9)
     precisions95, recalls95 = calculate_precision_recall(ground_truth, all_preds, len(CLASSES), iou_threshold=0.95)
 
-    print("Precisiones (IoU=0.5):", precisions50)
-    print("Recuperaciones (IoU=0.5):", recalls50)
+    #print("Precisiones (IoU=0.5):", precisions50)
+    #print("Recuperaciones (IoU=0.5):", recalls50)
 
     mAP50 = sum(precisions50) / len(precisions50)
     mAP55 = sum(precisions55) / len(precisions55)
@@ -146,6 +155,8 @@ def main(args: argparse.Namespace) -> None:
 
     print("mAP50:", mAP50)
     print("mAP50-95:", mAP50_95)
+    avg_infer_time = sum(infer_time) / len(infer_time)
+    print(f"Tiempo promedio de inferencia por imagen: {avg_infer_time:.4f} ms")
 
 def load_ground_truth_labels(labels_path):
     ground_truth = {}
@@ -173,7 +184,7 @@ def calculate_precision_recall(gt, preds, n_classes, iou_threshold=0.5):
     precisions = []
     recalls = []
     for cls in range(n_classes):
-        print("cls: ", cls)
+        ##print("cls: ", cls)
         tp, fp = 0, 0
         y_true = []
         y_pred = []
@@ -182,7 +193,7 @@ def calculate_precision_recall(gt, preds, n_classes, iou_threshold=0.5):
             if gt_label == cls and pred_label == cls:
                 #print(gt_label, gt_box, pred_label, pred_box )
                 iou = calculate_iou( gt_box, pred_box)
-                print('iou, gt, pred: ', iou,', ', gt_box, ', ', pred_box)
+                ##print('iou, gt, pred: ', iou,', ', gt_box, ', ', pred_box)
                 if iou >= iou_threshold:
                     tp += 1
                 else:
