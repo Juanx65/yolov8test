@@ -119,18 +119,33 @@ def main(args: argparse.Namespace) -> None:
             cv2.imwrite(str(save_image), draw)
 
     precisions50, recalls50 = calculate_precision_recall(ground_truth, all_preds, len(CLASSES), iou_threshold=0.5)
+    precisions55, recalls55 = calculate_precision_recall(ground_truth, all_preds, len(CLASSES), iou_threshold=0.55)
+    precisions60, recalls60 = calculate_precision_recall(ground_truth, all_preds, len(CLASSES), iou_threshold=0.6)
+    precisions65, recalls65 = calculate_precision_recall(ground_truth, all_preds, len(CLASSES), iou_threshold=0.65)
+    precisions70, recalls70 = calculate_precision_recall(ground_truth, all_preds, len(CLASSES), iou_threshold=0.7)
+    precisions75, recalls75 = calculate_precision_recall(ground_truth, all_preds, len(CLASSES), iou_threshold=0.75)
+    precisions80, recalls80 = calculate_precision_recall(ground_truth, all_preds, len(CLASSES), iou_threshold=0.8)
+    precisions85, recalls85 = calculate_precision_recall(ground_truth, all_preds, len(CLASSES), iou_threshold=0.85)
+    precisions90, recalls90 = calculate_precision_recall(ground_truth, all_preds, len(CLASSES), iou_threshold=0.9)
     precisions95, recalls95 = calculate_precision_recall(ground_truth, all_preds, len(CLASSES), iou_threshold=0.95)
 
     print("Precisiones (IoU=0.5):", precisions50)
     print("Recuperaciones (IoU=0.5):", recalls50)
-    print("Precisiones (IoU=0.95):", precisions95)
-    print("Recuperaciones (IoU=0.95):", recalls95)
 
     mAP50 = sum(precisions50) / len(precisions50)
+    mAP55 = sum(precisions55) / len(precisions55)
+    mAP60 = sum(precisions60) / len(precisions60)
+    mAP65 = sum(precisions65) / len(precisions65)
+    mAP70 = sum(precisions70) / len(precisions70)
+    mAP75 = sum(precisions75) / len(precisions75)
+    mAP80 = sum(precisions80) / len(precisions80)
+    mAP85 = sum(precisions85) / len(precisions85)
+    mAP90 = sum(precisions90) / len(precisions90)
     mAP95 = sum(precisions95) / len(precisions95)
+    mAP50_95= mAP50_95 = (mAP50 + mAP55 + mAP60 + mAP65 + mAP70 + mAP75 + mAP80 + mAP85 + mAP90 + mAP95) / 10
 
     print("mAP50:", mAP50)
-    print("mAP95:", mAP95)
+    print("mAP50-95:", mAP50_95)
 
 def load_ground_truth_labels(labels_path):
     ground_truth = {}
