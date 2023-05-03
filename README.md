@@ -95,6 +95,27 @@ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/targets/x86_64-linux/lib/
       </a>
 </div>
 
+# Resultados dataset piedra papel o tijera
+
+se obtienen al correr los codigos:
+
+* no RT:
+`python3 eval.py --weights='weights/best-yolo8n.pt' --imgs='datasets/data.yaml'`
+
+* RT:
+`python3 evalRT.py --engine='weights/best-yolo8n-fp16.engine' --imgs='datasets/data.yaml'`
+
+obs: Time: average inference time per image
+|   yolo8n    | size MB | Time ms | mAP50 | mAP50-95 |
+|-------------|---------|---------|-------|----------|
+| no RT       | 6.2     | 2.9     |0.958  |0.718     |
+| fp16 (RT)   | 8.6     | 1.19    |0.997  |0.723     |
+
+|   yolo8m    | size MB | Time ms | mAP50 | mAP50-95 |
+|-------------|---------|---------|-------|----------|
+| no RT       | 103.7   | 13.5    |0.964  |0.764     |
+| fp16 (RT)   | 55.4    | 3.88    |0.997  |0.745     |
+
 
 # REF
 
