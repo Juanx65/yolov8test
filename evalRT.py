@@ -4,16 +4,14 @@ from pathlib import Path
 
 import cv2
 import torch
-import os
 import math
 
 import yaml
-from sklearn.metrics import average_precision_score
 import glob 
 
 from config import CLASSES, COLORS
 from models.torch_utils import det_postprocess
-from models.utils import blob, letterbox, path_to_list
+from models.utils import blob, letterbox
 
 
 def main(args: argparse.Namespace) -> None:
@@ -68,7 +66,7 @@ def main(args: argparse.Namespace) -> None:
 
         ##############
         gt_labels, gt_boxs = get_ground_truth_label_and_box(image, ground_truth)  # Implementar esta función para obtener la etiqueta y caja de verdad de tierra
-        #print("gt_boxes para primera imagen: ", gt_boxs)
+        print("gt_boxes para primera imagen: ", gt_boxs)
         ########
 
         for j, (bbox, score, label) in enumerate( zip(bboxes, scores, labels)):
@@ -85,8 +83,11 @@ def main(args: argparse.Namespace) -> None:
                         thickness=2)
             
             gt_label_indice, gt_box = bbox_mas_cercana(gt_boxs,bbox)
-           #print(gt_label_indice, gt_labels)
-            gt_label = gt_labels[gt_label_indice]
+            #print(gt_label_indice, gt_labels)
+            if gt_label_indice is not None:
+                gt_label = gt_labels[gt_label_indice]
+            else:
+                gt_label = None
             
             all_preds.append((gt_label, gt_box, label, bbox, score))
 
@@ -180,8 +181,8 @@ def calculate_iou(box1, box2):
     x1, y1, x2, y2 = box1
     X1, Y1, X2, Y2 = box2
 
-    print("box gt: ", x1, y1, x2, y2)
-    print("box pr: ", X1, Y1, X2, Y2)
+    #print("box gt: ", x1, y1, x2, y2)
+    #print("box pr: ", X1, Y1, X2, Y2)
 
     xi1 = max(x1, X1)
     yi1 = max(y1, Y1)
@@ -216,19 +217,22 @@ def get_ground_truth_label_and_box(image, ground_truth):
     return labels, bboxs
 
 def bbox_mas_cercana(ground_truth, prediccion):
-    distancia_minima = math.inf
-    bbox_mas_cercana = None
-    indice_label = 0
-    for i, bbox in enumerate(ground_truth):
-        # Calcular la distancia euclidiana entre la predicción y cada bbox de ground truth
-        distancia = math.sqrt((bbox[0] - prediccion[0])**2 + (bbox[1] - prediccion[1])**2 + 
-                              (bbox[2] - prediccion[2])**2 + (bbox[3] - prediccion[3])**2)
-        # Actualizar la bbox más cercana si la distancia actual es menor que la distancia mínima anterior
-        if distancia < distancia_minima:
-            distancia_minima = distancia
-            bbox_mas_cercana = bbox
-            indice_label = i
-    return indice_label, bbox_mas_cercana
+    if ground_truth is not None:
+        distancia_minima = math.inf
+        bbox_mas_cercana = None
+        indice_label = 0
+        for i, bbox in enumerate(ground_truth):
+            # Calcular la distancia euclidiana entre la predicción y cada bbox de ground truth
+            distancia = math.sqrt((bbox[0] - prediccion[0])**2 + (bbox[1] - prediccion[1])**2 + 
+                                (bbox[2] - prediccion[2])**2 + (bbox[3] - prediccion[3])**2)
+            # Actualizar la bbox más cercana si la distancia actual es menor que la distancia mínima anterior
+            if distancia < distancia_minima:
+                distancia_minima = distancia
+                bbox_mas_cercana = bbox
+                indice_label = i
+        return indice_label, bbox_mas_cercana
+    else:
+        return None,None
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
