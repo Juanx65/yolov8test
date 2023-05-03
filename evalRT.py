@@ -66,13 +66,15 @@ def main(args: argparse.Namespace) -> None:
 
         ##############
         gt_labels, gt_boxs = get_ground_truth_label_and_box(image, ground_truth)  # Implementar esta función para obtener la etiqueta y caja de verdad de tierra
-        print("gt_boxes para primera imagen: ", gt_boxs)
+        #print("gt_boxes para primera imagen: ", gt_boxs)
         ########
 
-        for j, (bbox, score, label) in enumerate( zip(bboxes, scores, labels)):
+        for bbox, score, label in zip(bboxes, scores, labels):
+            #print("label: ", label)
             bbox = bbox.round().int().tolist()
             cls_id = int(label)
             cls = CLASSES[cls_id]
+            #print("label: ",cls_id)
             color = COLORS[cls]
             #print("box predict: ", bbox)
             cv2.rectangle(draw, bbox[:2], bbox[2:], color, 2)
@@ -82,14 +84,20 @@ def main(args: argparse.Namespace) -> None:
                         0.75, [225, 255, 255],
                         thickness=2)
             
-            gt_label_indice, gt_box = bbox_mas_cercana(gt_boxs,bbox)
-            #print(gt_label_indice, gt_labels)
-            if gt_label_indice is not None:
-                gt_label = gt_labels[gt_label_indice]
-            else:
-                gt_label = None
+            gt_box = None
+            gt_label = None
+            if gt_boxs is not None and gt_boxs:
+                gt_label_indice, gt_box = bbox_mas_cercana(gt_boxs,bbox)
+                #print(gt_boxs, gt_box)
+                gt_boxs.remove(gt_box)#elimina el primer valor que coincida
+                #print(gt_label_indice, gt_labels)
+                if gt_label_indice is not None:
+                    gt_label = gt_labels[gt_label_indice]
+                else:
+                    gt_label = None
+                gt_labels.pop(gt_label_indice) # esto elimina el label segun el indice
             
-            all_preds.append((gt_label, gt_box, label, bbox, score))
+            all_preds.append((gt_label, gt_box, cls_id, bbox, score))
 
             # Dibuja la caja del ground truth
             if gt_box is not None:
@@ -97,6 +105,13 @@ def main(args: argparse.Namespace) -> None:
                 x1, y1, x2, y2 = [int(coord) for coord in gt_box]
                 #print("box gt: ", x1, y1, x2, y2)
                 cv2.rectangle(draw, (x1, y1), (x2, y2), gt_color, 2)
+        if(gt_boxs): # añadir los ground truth que no fueron detectados para el calculo de las metricas
+            for i, gt_box in enumerate(gt_boxs):
+                x1, y1, x2, y2 = [int(coord) for coord in gt_box]
+                #print("box gt: ", x1, y1, x2, y2)
+                cv2.rectangle(draw, (x1, y1), (x2, y2), gt_color, 2)
+                #print("extra appended: ", gt_labels[i], gt_box)
+                all_preds.append((gt_labels[i], gt_box, None, None, None))
         if args.show:
             cv2.imshow('result', draw)
             cv2.waitKey(0)
@@ -143,14 +158,16 @@ def calculate_precision_recall(gt, preds, n_classes, iou_threshold=0.5):
     precisions = []
     recalls = []
     for cls in range(n_classes):
+        print("cls: ", cls)
         tp, fp = 0, 0
         y_true = []
         y_pred = []
 
         for gt_label, gt_box, pred_label, pred_box, pred_score in preds:
             if gt_label == cls and pred_label == cls:
+                #print(gt_label, gt_box, pred_label, pred_box )
                 iou = calculate_iou( gt_box, pred_box)
-                #print('iou, gt, pred: ', iou,', ', gt_box, ', ', pred_box)
+                print('iou, gt, pred: ', iou,', ', gt_box, ', ', pred_box)
                 if iou >= iou_threshold:
                     tp += 1
                 else:
