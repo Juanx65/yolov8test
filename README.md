@@ -109,11 +109,13 @@ obs: Time: average inference time per image
 |   yolo8n    | size MB | Time ms | mAP50 | mAP50-95 |
 |-------------|---------|---------|-------|----------|
 | no RT       | 6.2     | 2.9     |0.958  |0.718     |
+| fp32 (RT)   | 20.3    | 2.47    |1.0    |0.725     |
 | fp16 (RT)   | 8.6     | 1.19    |0.997  |0.723     |
 
 |   yolo8m    | size MB | Time ms | mAP50 | mAP50-95 |
 |-------------|---------|---------|-------|----------|
 | no RT       | 103.7   | 13.5    |0.964  |0.764     |
+| fp32 (RT)     | 153.5   | 11.4    |0.997  |0.746   |
 | fp16 (RT)   | 55.4    | 3.88    |0.997  |0.745     |
 
 
@@ -121,3 +123,4 @@ obs: Time: average inference time per image
 
 * YOLOv8 `https://github.com/ultralytics/ultralytics`
 * TensorRT-YOLOv8 `https://github.com/triple-Mu/YOLOv8-TensorRT`
+* Entendiendo TensorRT `https://medium.com/@abhaychaturvedi_72055/understanding-nvidias-tensorrt-for-deep-learning-model-optimization-dad3eb6b26d9`
