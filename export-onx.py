@@ -12,6 +12,7 @@ try:
 except ImportError:
     onnxsim = None
 
+BATCH_SIZE = 16
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -42,7 +43,7 @@ def parse_args():
     parser.add_argument('--input-shape',
                         nargs='+',
                         type=int,
-                        default=[1, 3, 640, 640],
+                        default=[BATCH_SIZE, 3, 640, 640],
                         help='Model input shape only for api builder')
     parser.add_argument('--device',
                         type=str,
