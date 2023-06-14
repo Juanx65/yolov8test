@@ -99,13 +99,18 @@ LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/cuda/targets/x86_64-linux/lib/
 
 se obtienen al correr los codigos:
 
-* no RT:
+* vanilla:
 `python3 eval.py --weights='weights/best-yolo8n.pt' --imgs='datasets/data.yaml'`
 
 * RT:
 `python3 evalRT.py --engine='weights/best-yolo8n-fp16.engine' --imgs='datasets/data.yaml'`
 
 obs: Time: average inference time per image
+
+--- 
+
+## Escritorio
+
 |   yolo8n    | size MB | Time ms | mAP50 | mAP50-95 |
 |-------------|---------|---------|-------|----------|
 | vanilla     | 6.2     | 2.9     |0.958  |0.718     |
@@ -120,6 +125,18 @@ obs: Time: average inference time per image
 | fp32 (RT)   | 153.5   | 11.4    |0.997  |0.746   |
 | fp16 (RT)   | 55.4    | 3.88    |0.997  |0.745     |
 
+---
+
+## Jetson AGX Xavier
+
+|   yolo8n    | size MB | Time ms | mAP50 | mAP50-95 |
+|-------------|---------|---------|-------|----------|
+| vanilla     | 6.2     | 20.3    |0.958  |0.718     |
+| fp32 (RT)   | 18.1    | 20.0782 |0.997  |0.723     |
+| fp16 (RT)   | 7.7     | 18.1419 |0.997  |0.723     |
+| int8 (RT)   | 5       | 10.5513 |1      |0.679     |
+
+---
 
 # REF
 
