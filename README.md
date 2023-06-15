@@ -138,6 +138,10 @@ obs: Time: average inference time per image
 
 ---
 
+obs: para su uso en la jetson TX2 es necesario cambiar en `models/torch_utils.py` la linea `from torchvision.ops import batched_nms` por `from torchvision.ops.boxes import batched_nms` debido a a la version de torch y torchvision que no pueden ser upgradeadas.
+
+---
+
 # REF
 
 * YOLOv8 `https://github.com/ultralytics/ultralytics`
