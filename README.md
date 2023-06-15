@@ -151,7 +151,7 @@ def asarray(a, dtype=None,device=None):
 ```
 y buscar el uso de `torch.asarray` para remplazarlo por esa funcion, debido a que torch 1.10.0 usado por la jetson TX2 no soporta torch.asarray.
 
-* 
+* Comentar linea 89 `cv2.rectangle(draw, bbox[:2], bbox[2:], color, 2)` ya que por alguna razon destrulle todo, esto solo hara qno se dibujen los rectangulos el lo detectado a la salida
 
 ---
 
