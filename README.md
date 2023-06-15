@@ -131,10 +131,23 @@ obs: Time: average inference time per image
 
 |   yolo8n    | size MB | Time ms | mAP50 | mAP50-95 |
 |-------------|---------|---------|-------|----------|
-| vanilla     | 6.2     | 20.3    |0.958  |0.718     |
+| vanilla     | -     |-   |-  |-     |
 | fp32 (RT)   | 18.1    | 20.0782 |0.997  |0.723     |
 | fp16 (RT)   | 7.7     | 18.1419 |0.997  |0.723     |
 | int8 (RT)   | 5       | 10.5513 |1      |0.679     |
+
+obs: no es posible correr version vanilla ni int8 por diferencias en versiones
+---
+
+
+## Jetson TX2
+
+|   yolo8n    | size MB | Time ms | mAP50 | mAP50-95 |
+|-------------|---------|---------|-------|----------|
+| vanilla     | 6.2     | 20.3    |0.958  |0.718     |
+| fp32 (RT)   | 26.7    | 29.574  |0.997  |0.723     |
+| fp16 (RT)   | 11.5    | 22.008  |0.987  |0.714     |
+| int8 (RT)   | -    | - |-     |-     |
 
 ---
 
