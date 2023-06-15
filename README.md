@@ -138,7 +138,20 @@ obs: Time: average inference time per image
 
 ---
 
-obs: para su uso en la jetson TX2 es necesario cambiar en `models/torch_utils.py` la linea `from torchvision.ops import batched_nms` por `from torchvision.ops.boxes import batched_nms` debido a a la version de torch y torchvision que no pueden ser upgradeadas.
+## Problemnas con Jetson TX2
+
+* para su uso en la jetson TX2 es necesario cambiar en `models/torch_utils.py` la linea `from torchvision.ops import batched_nms` por `from torchvision.ops.boxes import batched_nms` debido a a la version de torch y torchvision que no pueden ser upgradeadas segun `https://github.com/zhiqwang/yolov5-rt-stack/issues/72`.
+* dentro de evalRT.py es necesario crear la funcion asarray:
+``` 
+def asarray(a, dtype=None,device=None):
+	if isinstance(a, torch.Tensor):
+		return a
+	else:
+		return torch.tensor(a,dtype=dtype,device=device)
+```
+y buscar el uso de `torch.asarray` para remplazarlo por esa funcion, debido a que torch 1.10.0 usado por la jetson TX2 no soporta torch.asarray.
+
+* 
 
 ---
 
