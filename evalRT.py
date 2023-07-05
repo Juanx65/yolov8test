@@ -16,8 +16,6 @@ import time
 import numpy as np
 from shapely.geometry import Polygon
 
-
-
 def main(args: argparse.Namespace) -> None:
     device = torch.device(args.device)
     Engine = TRTModule(args.engine, device)
@@ -37,13 +35,13 @@ def main(args: argparse.Namespace) -> None:
         if not val_imgs_path:
             raise ValueError("No se encontró el conjunto de validación en el archivo YAML")
 
-        val_imgs = [str(x) for x in Path('datasetPellet/'+val_imgs_path).rglob("*.jpg")]
+        val_imgs = [str(x) for x in Path(args.imgs.split("/")[0]  + "/" + val_imgs_path).rglob("*.jpg")]
         images = val_imgs
         ## ------------------------------------#
         ## codigo agreado para obtener lso MAP #
         ##-------------------------------------#
         val_labs_path = yaml_data.get("val_label", "")
-        labels_path = Path('datasetPellet/'+ val_labs_path)
+        labels_path = Path(args.imgs.split("/")[0] + "/" + val_labs_path)
         ground_truth = load_ground_truth_labels(labels_path)
         #print('path: ', labels_path)
         #agregar aqui funcion que con el labels_path o yaml_data obtenga la informacion necesaria para calcular los map50 y map95 
@@ -175,6 +173,61 @@ def load_ground_truth_labels(labels_path):
                 ground_truth[filename].append((cls, points))
     return ground_truth
 
+def get_ground_truth_label_and_box(image, ground_truth):
+    filename = Path(image).stem
+    if filename not in ground_truth:
+        return None, None
+
+    gt_labels_boxes = ground_truth[filename]
+    if not gt_labels_boxes:
+        return None, None
+
+    bboxs = []
+    labels = []
+    for cls, coords in gt_labels_boxes:
+        points = [(coords[i], coords[i+1]) for i in range(0, len(coords), 2)]  # Reorganizamos x e y en pares
+        scaled_points = [[int(x*640), int(y*640)] for x, y in points]
+        #print(scaled_points)
+        bboxs.append(scaled_points)
+        labels.append(int(cls))
+    return labels, bboxs
+
+
+
+def centroid(poly):
+    # Calcular el centroide de un polígono.
+    # Polígono es una lista de pares de coordenadas [(x1, y1), (x2, y2), ...].
+    x_coords = [p[0] for p in poly]
+    y_coords = [p[1] for p in poly]
+    centroid_x = sum(x_coords) / len(poly)
+    centroid_y = sum(y_coords) / len(poly)
+    return centroid_x, centroid_y
+
+def bbox_mas_cercana(ground_truth, prediccion):
+    if ground_truth is not None:
+        distancia_minima = math.inf
+        bbox_mas_cercana = None
+        indice_label = 0
+        # Calcular el centroide del rectángulo de predicción
+        pred_centroid = centroid([(prediccion[0], prediccion[1]), 
+                                  (prediccion[0], prediccion[3]),
+                                  (prediccion[2], prediccion[1]),
+                                  (prediccion[2], prediccion[3])])
+        for i, poly in enumerate(ground_truth):
+            # Calcular el centroide del polígono de ground truth
+            gt_centroid = centroid(poly)
+            # Calcular la distancia euclidiana entre los centroides
+            distancia = np.sqrt((gt_centroid[0] - pred_centroid[0])**2 + 
+                                (gt_centroid[1] - pred_centroid[1])**2)
+            # Actualizar la bbox más cercana si la distancia actual es menor que la distancia mínima anterior
+            if distancia < distancia_minima:
+                distancia_minima = distancia
+                bbox_mas_cercana = poly
+                indice_label = i
+        return indice_label, bbox_mas_cercana
+    else:
+        return None, None
+
 def calculate_precision_recall(gt, preds, n_classes, iou_threshold=0.5):
     gt_labels = []
     gt_boxes = []
@@ -232,62 +285,6 @@ def calculate_iou(box1, box2):
     union_area = poly1.area + poly2.area - inter_area
 
     return inter_area / union_area
-
-
-def get_ground_truth_label_and_box(image, ground_truth):
-    filename = Path(image).stem
-    if filename not in ground_truth:
-        return None, None
-
-    gt_labels_boxes = ground_truth[filename]
-    if not gt_labels_boxes:
-        return None, None
-
-    bboxs = []
-    labels = []
-    for cls, coords in gt_labels_boxes:
-        num_points = len(coords) // 2  # La cantidad de puntos es la mitad de la longitud de la lista
-        points = [(coords[i], coords[i+1]) for i in range(0, len(coords), 2)]  # Reorganizamos x e y en pares
-        scaled_points = [[int(x*640), int(y*640)] for x, y in points]
-        bboxs.append(scaled_points)
-        labels.append(int(cls))
-    return labels, bboxs
-
-
-
-def centroid(poly):
-    # Calcular el centroide de un polígono.
-    # Polígono es una lista de pares de coordenadas [(x1, y1), (x2, y2), ...].
-    x_coords = [p[0] for p in poly]
-    y_coords = [p[1] for p in poly]
-    centroid_x = sum(x_coords) / len(poly)
-    centroid_y = sum(y_coords) / len(poly)
-    return centroid_x, centroid_y
-
-def bbox_mas_cercana(ground_truth, prediccion):
-    if ground_truth is not None:
-        distancia_minima = math.inf
-        bbox_mas_cercana = None
-        indice_label = 0
-        # Calcular el centroide del rectángulo de predicción
-        pred_centroid = centroid([(prediccion[0], prediccion[1]), 
-                                  (prediccion[0], prediccion[3]),
-                                  (prediccion[2], prediccion[1]),
-                                  (prediccion[2], prediccion[3])])
-        for i, poly in enumerate(ground_truth):
-            # Calcular el centroide del polígono de ground truth
-            gt_centroid = centroid(poly)
-            # Calcular la distancia euclidiana entre los centroides
-            distancia = np.sqrt((gt_centroid[0] - pred_centroid[0])**2 + 
-                                (gt_centroid[1] - pred_centroid[1])**2)
-            # Actualizar la bbox más cercana si la distancia actual es menor que la distancia mínima anterior
-            if distancia < distancia_minima:
-                distancia_minima = distancia
-                bbox_mas_cercana = poly
-                indice_label = i
-        return indice_label, bbox_mas_cercana
-    else:
-        return None, None
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
