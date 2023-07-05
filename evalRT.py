@@ -14,6 +14,7 @@ from models.torch_utils import det_postprocess
 from models.utils import blob, letterbox
 import time
 import numpy as np
+from shapely.geometry import Polygon
 
 
 
@@ -175,28 +176,25 @@ def load_ground_truth_labels(labels_path):
     return ground_truth
 
 def calculate_precision_recall(gt, preds, n_classes, iou_threshold=0.5):
-    #print('preds: ', preds)
     gt_labels = []
     gt_boxes = []
     for key in gt:
-        for cls, x, y, w, h in gt[key]:
+        for data in gt[key]:
+            cls = data[0]
+            coords = data[1:]  # Asumiendo que los puntos del polígono vienen después del label en tu data
             gt_labels.append(cls)
-            gt_boxes.append((x, y, w, h))
+            gt_boxes.append(coords)
 
-    #print(gt_boxes)
     precisions = []
     recalls = []
     for cls in range(n_classes):
-        ##print("cls: ", cls)
         tp, fp = 0, 0
         y_true = []
         y_pred = []
 
         for gt_label, gt_box, pred_label, pred_box, pred_score in preds:
             if gt_label == cls and pred_label == cls:
-                #print(gt_label, gt_box, pred_label, pred_box )
-                iou = calculate_iou( gt_box, pred_box)
-                ##print('iou, gt, pred: ', iou,', ', gt_box, ', ', pred_box)
+                iou = calculate_iou(gt_box, pred_box)
                 if iou >= iou_threshold:
                     tp += 1
                 else:
@@ -216,30 +214,22 @@ def calculate_precision_recall(gt, preds, n_classes, iou_threshold=0.5):
         precision = tp / (tp + fp) if tp + fp > 0 else 0
         recall = tp / len([x for x in gt_labels if x == cls]) if len([x for x in gt_labels if x == cls]) > 0 else 0
 
-        #print('precision, recall: ', precision,recall )
-
         precisions.append(precision)
         recalls.append(recall)
 
     return precisions, recalls
 
+
 def calculate_iou(box1, box2):
-    x1, y1, x2, y2 = box1
-    X1, Y1, X2, Y2 = box2
+    poly1 = Polygon(box1)
+    poly2 = Polygon([(box2[0], box2[1]), (box2[2], box2[1]), (box2[2], box2[3]), (box2[0], box2[3])])  # Convertimos las coordenadas del rectangulo a un poligono
+    
+    if not poly1.is_valid or not poly2.is_valid:
+        print('Invalid polygon')
+        return 0
 
-    #print("box gt: ", x1, y1, x2, y2)
-    #print("box pr: ", X1, Y1, X2, Y2)
-
-    xi1 = max(x1, X1)
-    yi1 = max(y1, Y1)
-    xi2 = min(x2, X2)
-    yi2 = min(y2, Y2)
-
-    inter_area = max(0, xi2 - xi1) * max(0, yi2 - yi1)
-    box1_area = (x2 - x1) * (y2 - y1)
-    box2_area = (X2 - X1) * (Y2 - Y1)
-    #print('box areas: ', box1_area, ' , ', box2_area)
-    union_area = box1_area + box2_area - inter_area
+    inter_area = poly1.intersection(poly2).area
+    union_area = poly1.area + poly2.area - inter_area
 
     return inter_area / union_area
 
